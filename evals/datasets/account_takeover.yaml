@@ -1,0 +1,80 @@
+# Eval case: account_takeover
+#
+# A customer's account shows a recent device change followed by
+# high-value outbound activity from a high-risk geography. The expected
+# outcome is `high_risk` — the agent must identify the suspicious new
+# device, correlate it with the recent transaction tail, and recommend
+# account freeze + L3 escalation.
+#
+# The mock stack returns deterministic "ato" data for cust-ato-01:
+# customer_data exposes 3-5 devices with the newest one marked
+# suspicious + high-risk geo (device_change_recent + geo_mismatch
+# flags); transactions has 18-30 txs with the last 3 being high-value
+# online_retail purchases from high-risk geo; kyc surfaces a
+# device_change_post_kyc flag; osint search returns a phishing-takeover
+# forum hit.
+
+id: account_takeover
+description: |
+  Account-takeover (ATO) typology. The customer's device history
+  shows a brand-new device from a high-risk geography; the last
+  three transactions are high-value online retail purchases routed
+  through the same suspicious device. The agent must identify the
+  device-change signal, correlate with the transaction tail, and
+  recommend immediate account freeze.
+
+scenario: ato
+
+input_alert:
+  alert_id: alert-ato-0001
+  customer_id: cust-ato-01
+  alert_type: account_takeover
+  severity: high
+  opened_at: "2026-05-26T11:45:00Z"
+  notes: |
+    Fraud-monitoring rule TM-018 triggered: $4,200 of online retail
+    purchases in 90 minutes from a device that first appeared on the
+    account 48h ago, geolocated to a high-risk country. Customer has
+    no prior travel history to that geography.
+
+expected_tool_calls:
+  - { server: customer_data, tool: get_customer }
+  - { server: customer_data, tool: list_accounts }
+  - { server: customer_data, tool: get_device_history }
+  - { server: transactions,  tool: get_transactions }
+  - { server: transactions,  tool: flag_velocity_anomalies }
+  - { server: kyc,           tool: get_kyc_record }
+  - { server: osint,         tool: web_search }
+
+# Profile + device history must precede transaction analysis so the
+# agent can map each transaction to a device. Transaction analysis
+# must precede the velocity flag (the flag aggregates the tx list).
+# Device history must precede the OSINT search so the agent can pivot
+# on the suspicious device's geo or fingerprint.
+ordering_constraints:
+  - before: { server: customer_data, tool: get_customer }
+    after:  { server: customer_data, tool: get_device_history }
+  - before: { server: customer_data, tool: get_device_history }
+    after:  { server: transactions,  tool: get_transactions }
+  - before: { server: transactions,  tool: get_transactions }
+    after:  { server: transactions,  tool: flag_velocity_anomalies }
+  - before: { server: customer_data, tool: get_device_history }
+    after:  { server: osint,         tool: web_search }
+
+expected_verdict: high_risk
+
+required_facts:
+  - claim: customer profile carries device_change_recent and geo_mismatch flags
+    supporting_tool: { server: customer_data, tool: get_customer }
+  - claim: accounts list shows the targeted account
+    supporting_tool: { server: customer_data, tool: list_accounts }
+  - claim: device history contains a newly-added suspicious device from a high-risk geography
+    supporting_tool: { server: customer_data, tool: get_device_history }
+  - claim: recent transaction tail shows high-value online_retail purchases from the same suspicious device
+    supporting_tool: { server: transactions, tool: get_transactions }
+  - claim: velocity-anomaly flags surface the ATO tail pattern
+    supporting_tool: { server: transactions, tool: flag_velocity_anomalies }
+  - claim: kyc record flags device_change_post_kyc (device added after identity verification)
+    supporting_tool: { server: kyc, tool: get_kyc_record }
+  - claim: OSINT search returns coverage of ATO/phishing-takeover patterns matching the device-change signal
+    supporting_tool: { server: osint, tool: web_search }

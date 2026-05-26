@@ -1,0 +1,46 @@
+# Eval case: clean_customer
+#
+# A low-noise alert on a long-standing customer. The expected outcome is
+# `low_risk` — the agent gathers a profile, finds no flags, and recommends
+# closing without escalation. This is the baseline eval that guards against
+# false positives: if the agent escalates a clean customer, we have a problem.
+#
+# The mock stack returns deterministic "clean" data for cust-clean-01 when
+# scenario=clean is passed at every hop.
+
+id: clean_customer
+description: |
+  Baseline scenario. A routine review alert opened on a long-standing
+  customer with no adverse signals. The agent should pull a profile,
+  scan recent transactions, and close the alert as low risk.
+
+scenario: clean
+
+input_alert:
+  alert_id: alert-clean-0001
+  customer_id: cust-clean-01
+  alert_type: routine_review
+  severity: low
+  opened_at: "2026-05-26T08:00:00Z"
+  notes: |
+    Quarterly portfolio review. No upstream typology hits. Allocator
+    flagged for analyst eyes only.
+
+expected_tool_calls:
+  - { server: customer_data, tool: get_customer }
+  - { server: customer_data, tool: list_accounts }
+  - { server: customer_data, tool: get_device_history }
+
+# A clean scenario produces no anomaly, so no cross-skill ordering is
+# load-bearing. Keep the list empty rather than inventing constraints.
+ordering_constraints: []
+
+expected_verdict: low_risk
+
+required_facts:
+  - claim: customer profile retrieved with kyc_status=verified
+    supporting_tool: { server: customer_data, tool: get_customer }
+  - claim: account count is within the clean scenario's 1-2 range
+    supporting_tool: { server: customer_data, tool: list_accounts }
+  - claim: device history contains no suspicious device
+    supporting_tool: { server: customer_data, tool: get_device_history }

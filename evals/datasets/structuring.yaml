@@ -1,0 +1,71 @@
+# Eval case: structuring
+#
+# A customer makes repeated cash deposits in the $8.5k-$9.9k band —
+# the classic $10k-CTR-avoidance signature. The expected outcome is
+# `high_risk` — the agent must identify the repeated sub-threshold
+# pattern via the transactions velocity flag, cross-reference KYC's
+# refresh recommendation, and recommend SAR draft + L3 escalation.
+#
+# The mock stack returns deterministic "structuring" data for
+# cust-structuring-01: customer_data carries the
+# repeated_sub_threshold_cash flag; transactions has 25-40 cash
+# deposits in the $8.5k-$9.9k band surfacing structuring_pattern in
+# velocity-anomalies; kyc surfaces a kyc_refresh_recommended flag;
+# osint search returns a cash-structuring bulletin hit.
+
+id: structuring
+description: |
+  Cash-structuring (CTR-avoidance) typology. The customer's account
+  shows >25 cash deposits clustered in the $8.5k-$9.9k band over
+  a short window — deliberately structured to stay below the $10k
+  currency transaction report threshold. The agent must surface
+  the structuring_pattern velocity flag and recommend a SAR draft.
+
+scenario: structuring
+
+input_alert:
+  alert_id: alert-structuring-0001
+  customer_id: cust-structuring-01
+  alert_type: structuring
+  severity: high
+  opened_at: "2026-05-26T12:15:00Z"
+  notes: |
+    Transaction-monitoring rule TM-014 triggered: 27 cash deposits
+    in 30 days all between $8,500 and $9,950, total $244,750. No
+    matching outbound flow. Pattern consistent with CTR-avoidance.
+
+expected_tool_calls:
+  - { server: customer_data, tool: get_customer }
+  - { server: customer_data, tool: list_accounts }
+  - { server: transactions,  tool: get_transactions }
+  - { server: transactions,  tool: get_counterparties }
+  - { server: transactions,  tool: flag_velocity_anomalies }
+  - { server: kyc,           tool: get_kyc_record }
+  - { server: osint,         tool: web_search }
+
+# Profile must precede transactions analysis (the agent needs to know
+# which account to query). Transaction analysis must precede the
+# velocity flag (the flag aggregates the tx list).
+ordering_constraints:
+  - before: { server: customer_data, tool: get_customer }
+    after:  { server: transactions,  tool: get_transactions }
+  - before: { server: transactions,  tool: get_transactions }
+    after:  { server: transactions,  tool: flag_velocity_anomalies }
+
+expected_verdict: high_risk
+
+required_facts:
+  - claim: customer profile carries repeated_sub_threshold_cash flag
+    supporting_tool: { server: customer_data, tool: get_customer }
+  - claim: accounts list shows the deposit account under review
+    supporting_tool: { server: customer_data, tool: list_accounts }
+  - claim: transaction list shows >=25 cash deposits in the $8.5k-$9.9k structuring band
+    supporting_tool: { server: transactions, tool: get_transactions }
+  - claim: counterparty rollup shows no offsetting outbound flow
+    supporting_tool: { server: transactions, tool: get_counterparties }
+  - claim: velocity-anomaly flag structuring_pattern is true
+    supporting_tool: { server: transactions, tool: flag_velocity_anomalies }
+  - claim: kyc record flags kyc_refresh_recommended (stale KYC vs current activity)
+    supporting_tool: { server: kyc, tool: get_kyc_record }
+  - claim: OSINT search returns regulatory bulletin coverage of cash-structuring typologies
+    supporting_tool: { server: osint, tool: web_search }

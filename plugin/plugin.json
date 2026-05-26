@@ -1,0 +1,95 @@
+{
+  "$schema": "https://cowork.anthropic.com/schemas/plugin.schema.json",
+  "name": "fraud-investigator",
+  "version": "0.1.0",
+  "description": "Agentic fraud-investigation copilot. Mirrors the Qonto architecture: orchestrator + subskills + verifier meta-skill, talking through an MCP gateway that enforces auth, RBAC, and audit.",
+  "author": "fraud-copilot-oss contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/iceberg-security/fraud-copilot-oss",
+  "entryPoint": "skills/orchestrator/SKILL.md",
+  "skills": [
+    {
+      "id": "orchestrator",
+      "path": "skills/orchestrator/SKILL.md",
+      "kind": "orchestrator"
+    },
+    {
+      "id": "gather-customer-profile",
+      "path": "skills/gather-customer-profile/SKILL.md",
+      "kind": "subskill"
+    },
+    {
+      "id": "analyze-transactions",
+      "path": "skills/analyze-transactions/SKILL.md",
+      "kind": "subskill"
+    },
+    {
+      "id": "check-osint",
+      "path": "skills/check-osint/SKILL.md",
+      "kind": "subskill"
+    },
+    {
+      "id": "screen-sanctions",
+      "path": "skills/screen-sanctions/SKILL.md",
+      "kind": "subskill"
+    },
+    {
+      "id": "draft-narrative",
+      "path": "skills/draft-narrative/SKILL.md",
+      "kind": "subskill"
+    },
+    {
+      "id": "verify-output",
+      "path": "skills/verify-output/SKILL.md",
+      "kind": "meta"
+    }
+  ],
+  "mcpServers": [
+    {
+      "name": "customer_data",
+      "transport": "streamable-http",
+      "urlEnv": "MCP_GATEWAY_URL",
+      "tools": [
+        "get_customer",
+        "list_accounts",
+        "get_device_history"
+      ]
+    },
+    {
+      "name": "transactions",
+      "transport": "streamable-http",
+      "urlEnv": "MCP_GATEWAY_URL",
+      "tools": [
+        "get_transactions",
+        "get_counterparties",
+        "flag_velocity_anomalies"
+      ]
+    },
+    {
+      "name": "osint",
+      "transport": "streamable-http",
+      "urlEnv": "MCP_GATEWAY_URL",
+      "tools": [
+        "web_search",
+        "fetch_page",
+        "lookup_company"
+      ]
+    },
+    {
+      "name": "sanctions",
+      "transport": "streamable-http",
+      "urlEnv": "MCP_GATEWAY_URL",
+      "tools": [
+        "screen_name",
+        "screen_entity",
+        "get_watchlist_hit"
+      ]
+    }
+  ],
+  "config": {
+    "auth": {
+      "tokenEndpointEnv": "AUTH_GATEWAY_TOKEN_URL",
+      "oidcBearerEnv": "OIDC_BEARER_TOKEN"
+    }
+  }
+}

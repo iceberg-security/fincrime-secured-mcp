@@ -1,0 +1,76 @@
+# Eval case: synthetic_id
+#
+# A new customer's identity records show internal inconsistencies — the
+# date-of-birth recorded in customer_data disagrees with the DOB on the
+# KYC document; thin credit file; shell-company UBO. The expected
+# outcome is `high_risk` (synthetic identity fraud) — the agent must
+# surface the DOB mismatch + the layered shell UBO and recommend SAR
+# draft + escalation.
+#
+# The mock stack returns deterministic "synthetic_id" data for
+# cust-synthetic-01: customer_data sets kyc_status=needs_review +
+# ssn_dob_mismatch + thin_credit_file flags (intentionally-off dob);
+# kyc surfaces ssn_dob_mismatch/thin_credit_file/address_unverified
+# inconsistencies + layered shell UBO (no_natural_person_at_top +
+# multi_layer_ownership) + thin doc set; osint lookup_company returns
+# shell_company_indicators + thin_records.
+
+id: synthetic_id
+description: |
+  Synthetic-identity fraud. The customer record's DOB disagrees with
+  the DOB on file in KYC; the credit file is unusually thin; the
+  beneficial owner chain runs through a layered shell company with
+  no natural person at the top. The agent must surface all three
+  signals as evidence of a fabricated identity and recommend a SAR
+  draft.
+
+scenario: synthetic_id
+
+input_alert:
+  alert_id: alert-synthetic-0001
+  customer_id: cust-synthetic-01
+  alert_type: synthetic_identity
+  severity: high
+  opened_at: "2026-05-26T13:00:00Z"
+  notes: |
+    KYC-refresh discrepancy: identity-bureau cross-check returned a
+    DOB inconsistent with the document on file. Combined with thin
+    credit file and shell-company ownership, hand off to fraud
+    investigations.
+
+expected_tool_calls:
+  - { server: customer_data, tool: get_customer }
+  - { server: customer_data, tool: list_accounts }
+  - { server: kyc,           tool: get_kyc_record }
+  - { server: kyc,           tool: get_document }
+  - { server: kyc,           tool: get_ubo_tree }
+  - { server: osint,         tool: lookup_company }
+
+# Profile must precede KYC (KYC is keyed on customer_id from the
+# profile). The KYC record must precede the document fetch (the
+# record carries the document_id list). The UBO tree must precede
+# the OSINT company lookup (the agent should know the holding
+# company's name before searching for adverse media on it).
+ordering_constraints:
+  - before: { server: customer_data, tool: get_customer }
+    after:  { server: kyc,           tool: get_kyc_record }
+  - before: { server: kyc,           tool: get_kyc_record }
+    after:  { server: kyc,           tool: get_document }
+  - before: { server: kyc,           tool: get_ubo_tree }
+    after:  { server: osint,         tool: lookup_company }
+
+expected_verdict: high_risk
+
+required_facts:
+  - claim: customer profile carries ssn_dob_mismatch and thin_credit_file flags with kyc_status=needs_review
+    supporting_tool: { server: customer_data, tool: get_customer }
+  - claim: accounts list shows the newly-opened account under review
+    supporting_tool: { server: customer_data, tool: list_accounts }
+  - claim: kyc record reports a dob inconsistent with the customer_data dob (synthetic-identity signal)
+    supporting_tool: { server: kyc, tool: get_kyc_record }
+  - claim: kyc document set is thin (a single near-expired id document) and matches the inconsistency on the record
+    supporting_tool: { server: kyc, tool: get_document }
+  - claim: UBO tree shows layered shell ownership with no natural person at the top
+    supporting_tool: { server: kyc, tool: get_ubo_tree }
+  - claim: OSINT company lookup returns shell_company_indicators and thin_records signals on the holding entity
+    supporting_tool: { server: osint, tool: lookup_company }

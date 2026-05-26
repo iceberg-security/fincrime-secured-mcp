@@ -1,0 +1,40 @@
+name: evals-smoke
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  evals-smoke:
+    name: PR-time eval smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Validate dataset schemas
+        run: python -m evals.validate
+
+      - name: Run smoke evals
+        run: python -m evals.run --smoke --output evals-scorecard.json
+
+      - name: Upload scorecard artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals-smoke-scorecard
+          path: evals-scorecard.json
+          retention-days: 14

@@ -1,0 +1,41 @@
+# Grafana datasources provisioning (US-023).
+#
+# Both SQLite (default) and ClickHouse datasource entries are provisioned;
+# only one is active per deployment based on AUDIT_BACKEND. Grafana ignores
+# the inactive entry's connection failure at dashboard-load time — panels
+# fall back to whichever target matches the live datasource.
+#
+# - SQLite: reads the file mounted at /var/audit/audit.db (same volume the
+#   MCP gateway writes to). Requires the frser-sqlite-datasource plugin
+#   (installed via GF_INSTALL_PLUGINS in docker-compose.yml).
+#
+# - ClickHouse: reads from the host/port/db named by CLICKHOUSE_HOST etc.
+#   Only used when AUDIT_BACKEND=clickhouse — the audit module's
+#   ClickHouseAuditBackend writes to the same table.
+
+apiVersion: 1
+
+datasources:
+  - name: audit-sqlite
+    uid: fraud_audit_sqlite
+    type: frser-sqlite-datasource
+    access: proxy
+    isDefault: ${AUDIT_BACKEND_IS_SQLITE}
+    editable: false
+    jsonData:
+      path: /var/audit/audit.db
+
+  - name: audit-clickhouse
+    uid: fraud_audit_clickhouse
+    type: grafana-clickhouse-datasource
+    access: proxy
+    isDefault: ${AUDIT_BACKEND_IS_CLICKHOUSE}
+    editable: false
+    jsonData:
+      host: ${CLICKHOUSE_HOST}
+      port: ${CLICKHOUSE_PORT}
+      protocol: http
+      defaultDatabase: ${CLICKHOUSE_DATABASE}
+      username: ${CLICKHOUSE_USER}
+    secureJsonData:
+      password: ${CLICKHOUSE_PASSWORD}

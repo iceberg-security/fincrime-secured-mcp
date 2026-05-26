@@ -1,0 +1,8 @@
+{
+  "name": "fraud-investigator",
+  "version": "0.1.0",
+  "description": "Agentic fraud-investigation copilot. Orchestrator + 5 subskills + verifier meta-skill, talking through a PASETO + RBAC + audit MCP gateway to six federated downstream MCP servers.",
+  "author": {
+    "name": "fraud-copilot-oss contributors"
+  }
+}

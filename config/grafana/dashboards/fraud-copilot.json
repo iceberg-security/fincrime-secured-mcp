@@ -1,0 +1,169 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "Fraud Investigator audit overview — per-user tool-call counts, p50/p95 latency by tool, denied requests by role, and audit volume per day. Reads the audit_events table written by the MCP gateway. Loads against SQLite (default) or ClickHouse via the AUDIT_BACKEND env var; the right datasource is provisioned by config/grafana/provisioning/datasources/audit.yaml.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "type": "barchart",
+      "title": "Tool calls per user (last 24h)",
+      "description": "Count of audit_events grouped by sub. One bar per user; height = total tool-call count over the dashboard time range.",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "datasource": {"uid": "${DS_AUDIT}"},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "frser-sqlite-datasource", "uid": "fraud_audit_sqlite"},
+          "rawQueryText": "SELECT sub, COUNT(*) AS calls FROM audit_events WHERE ts >= datetime('now', '-1 day') GROUP BY sub ORDER BY calls DESC",
+          "queryType": "table",
+          "rawSql": "SELECT sub, COUNT(*) AS calls FROM audit_events WHERE ts >= datetime('now', '-1 day') GROUP BY sub ORDER BY calls DESC",
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "grafana-clickhouse-datasource", "uid": "fraud_audit_clickhouse"},
+          "rawSql": "SELECT sub, count() AS calls FROM audit_events WHERE ts >= now() - INTERVAL 1 DAY GROUP BY sub ORDER BY calls DESC",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "xField": "sub",
+        "legend": {"displayMode": "list", "placement": "bottom"}
+      },
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Latency p50 / p95 by tool (ms)",
+      "description": "Per-tool 50th and 95th percentile of latency_ms across the dashboard time range. ClickHouse uses quantile(); SQLite uses an ordinal approximation via ORDER BY + LIMIT/OFFSET window arithmetic on per-tool partitions.",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "datasource": {"uid": "${DS_AUDIT}"},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "frser-sqlite-datasource", "uid": "fraud_audit_sqlite"},
+          "rawSql": "WITH ranked AS (SELECT server, tool, latency_ms, ROW_NUMBER() OVER (PARTITION BY server, tool ORDER BY latency_ms) AS rn, COUNT(*) OVER (PARTITION BY server, tool) AS n FROM audit_events WHERE status = 'ok') SELECT server, tool, MAX(CASE WHEN rn = CAST(0.5 * n + 0.5 AS INTEGER) THEN latency_ms END) AS p50_ms, MAX(CASE WHEN rn = CAST(0.95 * n + 0.5 AS INTEGER) THEN latency_ms END) AS p95_ms, COUNT(*) AS samples FROM ranked GROUP BY server, tool ORDER BY p95_ms DESC",
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "grafana-clickhouse-datasource", "uid": "fraud_audit_clickhouse"},
+          "rawSql": "SELECT server, tool, quantile(0.5)(latency_ms) AS p50_ms, quantile(0.95)(latency_ms) AS p95_ms, count() AS samples FROM audit_events WHERE status = 'ok' GROUP BY server, tool ORDER BY p95_ms DESC",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "sortBy": [{"displayName": "p95_ms", "desc": true}]
+      },
+      "fieldConfig": {
+        "defaults": {"unit": "ms", "custom": {"align": "auto"}},
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "barchart",
+      "title": "Denied requests by role (stacked)",
+      "description": "Count of audit_events with status='denied', stacked by deny_reason and grouped by role. A spike here means RBAC is doing its job — investigate per-role to make sure operators have the right scopes.",
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8},
+      "datasource": {"uid": "${DS_AUDIT}"},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "frser-sqlite-datasource", "uid": "fraud_audit_sqlite"},
+          "rawSql": "SELECT role, COALESCE(deny_reason, 'unknown') AS deny_reason, COUNT(*) AS denials FROM audit_events WHERE status = 'denied' GROUP BY role, deny_reason ORDER BY denials DESC",
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "grafana-clickhouse-datasource", "uid": "fraud_audit_clickhouse"},
+          "rawSql": "SELECT role, coalesce(deny_reason, 'unknown') AS deny_reason, count() AS denials FROM audit_events WHERE status = 'denied' GROUP BY role, deny_reason ORDER BY denials DESC",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "orientation": "vertical",
+        "stacking": "normal",
+        "xField": "role",
+        "legend": {"displayMode": "list", "placement": "bottom"}
+      },
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Audit volume per day",
+      "description": "Total audit_events written per calendar day. The system-of-record for compliance volume; should grow monotonically with usage.",
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8},
+      "datasource": {"uid": "${DS_AUDIT}"},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "frser-sqlite-datasource", "uid": "fraud_audit_sqlite"},
+          "rawSql": "SELECT strftime('%s', date(ts)) * 1000 AS time, COUNT(*) AS events FROM audit_events GROUP BY date(ts) ORDER BY date(ts) ASC",
+          "format": "time_series"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "grafana-clickhouse-datasource", "uid": "fraud_audit_clickhouse"},
+          "rawSql": "SELECT toStartOfDay(ts) AS time, count() AS events FROM audit_events GROUP BY time ORDER BY time ASC",
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "fieldConfig": {
+        "defaults": {"unit": "short", "custom": {"drawStyle": "bars", "fillOpacity": 60}},
+        "overrides": []
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["fraud-copilot", "audit", "compliance"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": false, "text": "audit", "value": "audit"},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Audit datasource",
+        "multi": false,
+        "name": "DS_AUDIT",
+        "options": [],
+        "query": "frser-sqlite-datasource",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {"from": "now-7d", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Fraud Copilot — Audit overview",
+  "uid": "fraud-copilot-audit",
+  "version": 1,
+  "weekStart": ""
+}

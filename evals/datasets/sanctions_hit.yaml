@@ -1,0 +1,69 @@
+# Eval case: sanctions_hit
+#
+# A customer matches an OFAC-style sanctions list. The expected outcome
+# is `high_risk` — the agent must screen the name, confirm the hit
+# details, cross-check the KYC record, and recommend escalation +
+# account freeze.
+#
+# The mock stack returns deterministic "sanctions_hit" data for
+# cust-sanctions-01: customer_data sets risk_score>=80 + pep=true +
+# sanctions_watchlist_possible flag; kyc sets pep_flag=true,
+# sanctions_match=true, kyc_status=needs_review, UBO pep_at_top=true;
+# sanctions mock returns one or more SDN/PEP hits for the customer's
+# full name.
+
+id: sanctions_hit
+description: |
+  OFAC-style sanctions hit on a customer. The customer's KYC record
+  flags PEP + sanctions match; the sanctions mock confirms an SDN
+  match against the customer's legal name. The agent must surface
+  the hit details and recommend immediate L3 escalation.
+
+scenario: sanctions_hit
+
+input_alert:
+  alert_id: alert-sanctions-0001
+  customer_id: cust-sanctions-01
+  alert_type: sanctions_screening_hit
+  severity: critical
+  opened_at: "2026-05-26T10:30:00Z"
+  notes: |
+    Daily sanctions-list refresh triggered a high-confidence name
+    match against the OFAC SDN list. Hit score 92. Programs:
+    OFAC_SDN, EU_CONSOLIDATED.
+
+expected_tool_calls:
+  - { server: customer_data, tool: get_customer }
+  - { server: kyc,           tool: get_kyc_record }
+  - { server: kyc,           tool: get_ubo_tree }
+  - { server: sanctions,     tool: screen_name }
+  - { server: sanctions,     tool: get_watchlist_hit }
+  - { server: osint,         tool: web_search }
+
+# Profile must precede KYC (we need the name to pull KYC). KYC must
+# precede sanctions screening (KYC carries the legal name + DOB
+# the screen runs against). The screen must precede the per-hit
+# fetch (hit_id only exists after a successful screen).
+ordering_constraints:
+  - before: { server: customer_data, tool: get_customer }
+    after:  { server: kyc,           tool: get_kyc_record }
+  - before: { server: kyc,           tool: get_kyc_record }
+    after:  { server: sanctions,     tool: screen_name }
+  - before: { server: sanctions,     tool: screen_name }
+    after:  { server: sanctions,     tool: get_watchlist_hit }
+
+expected_verdict: high_risk
+
+required_facts:
+  - claim: customer profile carries sanctions_watchlist_possible flag and pep=true
+    supporting_tool: { server: customer_data, tool: get_customer }
+  - claim: kyc record sets pep_flag=true and sanctions_match=true with kyc_status=needs_review
+    supporting_tool: { server: kyc, tool: get_kyc_record }
+  - claim: UBO tree pep_at_top flag is true (politically exposed person at the top of the ownership chain)
+    supporting_tool: { server: kyc, tool: get_ubo_tree }
+  - claim: name screening returns matched=true with at least one OFAC/EU/UN/UK program hit
+    supporting_tool: { server: sanctions, tool: screen_name }
+  - claim: watchlist hit detail confirms a high-risk country and match_score >= 82
+    supporting_tool: { server: sanctions, tool: get_watchlist_hit }
+  - claim: OSINT search surfaces adverse media or regulator-action coverage of the subject
+    supporting_tool: { server: osint, tool: web_search }

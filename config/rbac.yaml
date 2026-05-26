@@ -1,0 +1,49 @@
+# RBAC configuration for the fraud-copilot-oss stack.
+#
+# Schema:
+#   roles.<name>:
+#     inherits:        list of role names whose servers/tools merge in
+#     allowed_servers: list of MCP server names this role can talk to
+#     allowed_tools:
+#       <server>: ["*"] | [<tool>, ...]
+#       # or top-level wildcard: allowed_tools: "*"
+#   users.<email>.roles: list of role names
+#   groups.<group_name>.roles: list of role names (mapped from IdP claims)
+#
+# Loaded by gateways/common/rbac.py. Hot-reloaded on file change.
+# Reviewed in PRs; treat as code.
+
+roles:
+  base_reader:
+    allowed_servers: [customer_data]
+    allowed_tools:
+      customer_data: [get_customer, list_accounts, get_device_history]
+
+  analyst:
+    inherits: [base_reader]
+    allowed_servers: [transactions, kyc, sanctions, osint]
+    allowed_tools:
+      transactions: [get_transactions, get_counterparties, flag_velocity_anomalies]
+      kyc: [get_kyc_record, get_document, get_ubo_tree]
+      sanctions: [screen_name, screen_entity, get_watchlist_hit]
+      osint: [web_search, fetch_page, lookup_company]
+
+  l3_admin:
+    inherits: [analyst]
+    allowed_servers: [case_actions]
+    allowed_tools:
+      case_actions: [create_sar_draft, freeze_account, escalate_to_l3]
+
+users:
+  alice@example.com:
+    roles: [analyst]
+  bob@example.com:
+    roles: [l3_admin]
+  readonly@example.com:
+    roles: [base_reader]
+
+groups:
+  fraud-analysts:
+    roles: [analyst]
+  fraud-l3:
+    roles: [l3_admin]

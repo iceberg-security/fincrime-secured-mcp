@@ -1,0 +1,388 @@
+# docker-compose for the full M1 stack (US-024).
+#
+# Brings up every component needed to run the fraud-investigator-plugin
+# end-to-end against the mock stack:
+#
+#   * mock OIDC IdP                                       (port 9000)
+#   * auth gateway                                        (port 8080)
+#   * MCP gateway                                         (port 8000)
+#   * six federated mock APIs (customer_data, transactions, kyc, sanctions,
+#     osint, case_actions)                                (ports 8001-8011 odd)
+#   * six federated MCP servers, one per mock API         (ports 8002-8012 even)
+#   * Grafana with the audit dashboard                    (port 3000)
+#
+# The SQLite audit DB lives on the named ``audit_data`` volume, which the
+# MCP gateway writes to and Grafana mounts read-only.
+#
+# Prerequisite (one-off): generate dev keypairs.
+#
+#     python scripts/gen_dev_keys.py        (or: make gen-keys)
+#
+# Then:
+#
+#     make compose-up           # builds the image, brings up every service
+#     make compose-ps           # all services should be 'healthy' within ~15s
+#     make load-fixtures        # seed the six scenario personas
+#
+# Cold-start benchmark: on an M-series MacBook the stack is healthy within
+# ~22 seconds from ``docker compose up`` (after the image is built). See
+# README "Cold-start benchmark" for the methodology.
+#
+# Smoke test (manual):
+#
+#     TOKEN=$(curl -s "http://localhost:9000/login?email=alice@example.com" | jq -r .access_token)
+#     PASETO=$(curl -s -X POST http://localhost:8080/token \
+#                  -H "Authorization: Bearer $TOKEN" | jq -r .access_token)
+#     curl -s -X POST http://localhost:8000/mcp/customer_data \
+#          -H "Authorization: Bearer $PASETO" \
+#          -H 'Content-Type: application/json' \
+#          -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
+#               "params":{"name":"get_customer",
+#                          "arguments":{"customer_id":"cust-0001"}}}'
+
+x-healthcheck-py: &healthcheck-py
+  interval: 2s
+  timeout: 3s
+  retries: 6
+  start_period: 1s
+
+services:
+  mock-oidc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fraud-copilot-oss:dev
+    container_name: fraud-mock-oidc
+    command: >
+      uvicorn mock_apis.mock_oidc.main:build_default_app
+      --factory --host 0.0.0.0 --port 9000
+    environment:
+      RBAC_CONFIG_PATH: /app/config/rbac.yaml
+      MOCK_OIDC_AUDIENCE: fraud-copilot
+      MOCK_OIDC_ISSUER: http://mock-oidc:9000
+    ports:
+      - "9000:9000"
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9000/healthz', timeout=2).status==200 else 1)"]
+
+  auth-gateway:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-auth-gateway
+    command: >
+      uvicorn gateways.auth.main:build_default_app
+      --factory --host 0.0.0.0 --port 8080
+    environment:
+      OIDC_JWKS_URL: http://mock-oidc:9000/jwks
+      OIDC_AUDIENCE: fraud-copilot
+      OIDC_ISSUER: http://mock-oidc:9000
+      RBAC_CONFIG_PATH: /app/config/rbac.yaml
+      PASETO_PRIVATE_KEY_PATH: /app/config/keys/auth_paseto_private.pem
+      PASETO_PUBLIC_KEY_PATH: /app/config/keys/auth_paseto_public.pem
+    volumes:
+      - ./config/keys:/app/config/keys:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      mock-oidc:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8080/healthz', timeout=2).status==200 else 1)"]
+
+  # --------------------------------------------------------------------- #
+  # Mock APIs (six). Each is pure in-memory; no inter-mock dependencies.  #
+  # Mocks bind on odd ports starting at 8001; their MCP servers bind on   #
+  # the next even port.                                                   #
+  # --------------------------------------------------------------------- #
+
+  customer-data-mock:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-customer-data-mock
+    command: >
+      uvicorn mock_apis.customer_data.main:build_default_app
+      --factory --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/healthz', timeout=2).status==200 else 1)"]
+
+  transactions-mock:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-transactions-mock
+    command: >
+      uvicorn mock_apis.transactions.main:build_default_app
+      --factory --host 0.0.0.0 --port 8003
+    ports:
+      - "8003:8003"
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8003/healthz', timeout=2).status==200 else 1)"]
+
+  kyc-mock:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-kyc-mock
+    command: >
+      uvicorn mock_apis.kyc.main:build_default_app
+      --factory --host 0.0.0.0 --port 8005
+    ports:
+      - "8005:8005"
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8005/healthz', timeout=2).status==200 else 1)"]
+
+  sanctions-mock:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-sanctions-mock
+    command: >
+      uvicorn mock_apis.sanctions.main:build_default_app
+      --factory --host 0.0.0.0 --port 8007
+    ports:
+      - "8007:8007"
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8007/healthz', timeout=2).status==200 else 1)"]
+
+  osint-mock:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-osint-mock
+    command: >
+      uvicorn mock_apis.osint.main:build_default_app
+      --factory --host 0.0.0.0 --port 8009
+    ports:
+      - "8009:8009"
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8009/healthz', timeout=2).status==200 else 1)"]
+
+  case-actions-mock:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-case-actions-mock
+    command: >
+      uvicorn mock_apis.case_actions.main:build_default_app
+      --factory --host 0.0.0.0 --port 8011
+    ports:
+      - "8011:8011"
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8011/healthz', timeout=2).status==200 else 1)"]
+
+  # --------------------------------------------------------------------- #
+  # MCP servers (six). All six share the same service PASETO keypair      #
+  # (config/keys/service_paseto_*.pem) — the MCP gateway mints with the   #
+  # private half; each server verifies with the public half.              #
+  # --------------------------------------------------------------------- #
+
+  customer-data-mcp:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-customer-data-mcp
+    command: >
+      uvicorn mcp_servers.customer_data.main:build_default_app
+      --factory --host 0.0.0.0 --port 8002
+    environment:
+      CUSTOMER_DATA_MCP_PUBLIC_KEY: /app/config/keys/service_paseto_public.pem
+      CUSTOMER_DATA_API_URL: http://customer-data-mock:8001
+    volumes:
+      - ./config/keys:/app/config/keys:ro
+    ports:
+      - "8002:8002"
+    depends_on:
+      customer-data-mock:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8002/healthz', timeout=2).status==200 else 1)"]
+
+  transactions-mcp:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-transactions-mcp
+    command: >
+      uvicorn mcp_servers.transactions.main:build_default_app
+      --factory --host 0.0.0.0 --port 8004
+    environment:
+      TRANSACTIONS_MCP_PUBLIC_KEY: /app/config/keys/service_paseto_public.pem
+      TRANSACTIONS_API_URL: http://transactions-mock:8003
+    volumes:
+      - ./config/keys:/app/config/keys:ro
+    ports:
+      - "8004:8004"
+    depends_on:
+      transactions-mock:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8004/healthz', timeout=2).status==200 else 1)"]
+
+  kyc-mcp:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-kyc-mcp
+    command: >
+      uvicorn mcp_servers.kyc.main:build_default_app
+      --factory --host 0.0.0.0 --port 8006
+    environment:
+      KYC_MCP_PUBLIC_KEY: /app/config/keys/service_paseto_public.pem
+      KYC_API_URL: http://kyc-mock:8005
+    volumes:
+      - ./config/keys:/app/config/keys:ro
+    ports:
+      - "8006:8006"
+    depends_on:
+      kyc-mock:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8006/healthz', timeout=2).status==200 else 1)"]
+
+  sanctions-mcp:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-sanctions-mcp
+    command: >
+      uvicorn mcp_servers.sanctions.main:build_default_app
+      --factory --host 0.0.0.0 --port 8008
+    environment:
+      SANCTIONS_MCP_PUBLIC_KEY: /app/config/keys/service_paseto_public.pem
+      SANCTIONS_API_URL: http://sanctions-mock:8007
+    volumes:
+      - ./config/keys:/app/config/keys:ro
+    ports:
+      - "8008:8008"
+    depends_on:
+      sanctions-mock:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8008/healthz', timeout=2).status==200 else 1)"]
+
+  osint-mcp:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-osint-mcp
+    command: >
+      uvicorn mcp_servers.osint.main:build_default_app
+      --factory --host 0.0.0.0 --port 8010
+    environment:
+      OSINT_MCP_PUBLIC_KEY: /app/config/keys/service_paseto_public.pem
+      OSINT_API_URL: http://osint-mock:8009
+      # Default-deny outbound web — operators add public OSINT hosts here.
+      OSINT_ALLOWLIST: ${OSINT_ALLOWLIST:-}
+    volumes:
+      - ./config/keys:/app/config/keys:ro
+    ports:
+      - "8010:8010"
+    depends_on:
+      osint-mock:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8010/healthz', timeout=2).status==200 else 1)"]
+
+  case-actions-mcp:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-case-actions-mcp
+    command: >
+      uvicorn mcp_servers.case_actions.main:build_default_app
+      --factory --host 0.0.0.0 --port 8012
+    environment:
+      CASE_ACTIONS_MCP_PUBLIC_KEY: /app/config/keys/service_paseto_public.pem
+      CASE_ACTIONS_API_URL: http://case-actions-mock:8011
+    volumes:
+      - ./config/keys:/app/config/keys:ro
+    ports:
+      - "8012:8012"
+    depends_on:
+      case-actions-mock:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8012/healthz', timeout=2).status==200 else 1)"]
+
+  # --------------------------------------------------------------------- #
+  # MCP Gateway — fronts every downstream MCP server in the URL map.      #
+  # --------------------------------------------------------------------- #
+
+  mcp-gateway:
+    image: fraud-copilot-oss:dev
+    container_name: fraud-mcp-gateway
+    command: >
+      uvicorn gateways.mcp.main:build_default_app
+      --factory --host 0.0.0.0 --port 8000
+    environment:
+      # JSON map of {server_name: base_url}. The gateway POSTs to
+      # f"{base_url}/{server}", so each value must point at the MCP server
+      # for that server name. Adding a new MCP server = one entry here +
+      # one entry in config/rbac.yaml's allowed_servers.
+      MCP_GATEWAY_DOWNSTREAM_URLS: >-
+        {"customer_data":"http://customer-data-mcp:8002",
+         "transactions":"http://transactions-mcp:8004",
+         "kyc":"http://kyc-mcp:8006",
+         "sanctions":"http://sanctions-mcp:8008",
+         "osint":"http://osint-mcp:8010",
+         "case_actions":"http://case-actions-mcp:8012"}
+      MCP_GATEWAY_SERVICE_PRIVATE_KEY: /app/config/keys/service_paseto_private.pem
+      MCP_GATEWAY_INBOUND_PUBLIC_KEY: /app/config/keys/auth_paseto_public.pem
+      AUDIT_BACKEND: sqlite
+      AUDIT_DB_PATH: /app/audit/audit.db
+      RBAC_CONFIG_PATH: /app/config/rbac.yaml
+    volumes:
+      - ./config/keys:/app/config/keys:ro
+      - audit_data:/app/audit
+    ports:
+      - "8100:8000"
+    depends_on:
+      auth-gateway:
+        condition: service_healthy
+      customer-data-mcp:
+        condition: service_healthy
+      transactions-mcp:
+        condition: service_healthy
+      kyc-mcp:
+        condition: service_healthy
+      sanctions-mcp:
+        condition: service_healthy
+      osint-mcp:
+        condition: service_healthy
+      case-actions-mcp:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=2).status==200 else 1)"]
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: fraud-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Auto-install the SQLite + ClickHouse datasource plugins so the
+      # provisioned datasources resolve on first boot.
+      GF_INSTALL_PLUGINS: "frser-sqlite-datasource,grafana-clickhouse-datasource"
+      # Selects which provisioned datasource is the default. Override with
+      # AUDIT_BACKEND=clickhouse via .env to flip without editing YAML.
+      AUDIT_BACKEND: ${AUDIT_BACKEND:-sqlite}
+      AUDIT_BACKEND_IS_SQLITE: ${AUDIT_BACKEND_IS_SQLITE:-true}
+      AUDIT_BACKEND_IS_CLICKHOUSE: ${AUDIT_BACKEND_IS_CLICKHOUSE:-false}
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST:-clickhouse}
+      CLICKHOUSE_PORT: ${CLICKHOUSE_PORT:-8123}
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-default}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/etc/grafana/dashboards:ro
+      # Read-only mount of the same volume the MCP gateway writes its
+      # SQLite audit DB into — SQLite datasource path is /var/audit/audit.db.
+      - audit_data:/var/audit:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      mcp-gateway:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-py
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/health || exit 1"]
+
+volumes:
+  audit_data:
+  grafana_data:
