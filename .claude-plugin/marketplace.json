@@ -1,16 +1,16 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "fraud-copilot-oss",
+  "name": "fincrime-secured-mcp",
   "description": "Open-source agentic fraud-investigation copilot with auth, RBAC, and audit plumbing. Federated MCP gateway fronts six downstream MCP servers behind PASETO-authenticated, RBAC-enforced calls.",
   "owner": {
-    "name": "fraud-copilot-oss contributors"
+    "name": "fincrime-secured-mcp contributors"
   },
   "plugins": [
     {
       "name": "fraud-investigator",
       "description": "Agentic fraud-investigation copilot. Orchestrator + 5 subskills + verifier meta-skill, talking through a PASETO + RBAC + audit MCP gateway to six federated downstream MCP servers.",
       "author": {
-        "name": "fraud-copilot-oss contributors"
+        "name": "fincrime-secured-mcp contributors"
       },
       "category": "security",
       "source": "./claude_code_plugin",

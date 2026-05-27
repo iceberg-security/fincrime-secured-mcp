@@ -1,20 +1,21 @@
 ---
 description: "Show the last N rows of the fraud-copilot audit DB (default 20)"
 argument-hint: "[N]"
-allowed-tools: ["Bash(docker exec fraud-mcp-gateway python:*)"]
+allowed-tools: ["Bash(make:*)", "Bash(docker:*)", "Bash(cd:*)"]
 ---
 
 # Audit Trail
 
 Show the user the most recent audit rows from the MCP gateway. This proves every model action was signed, RBAC-checked, and logged.
 
+The Make target lives in the `fincrime-secured-mcp` repo. The command below `cd`s into the repo first (typically `~/Desktop/iceberg-workspace/fincrime-secured-mcp` — if the user's clone is elsewhere, adjust the path). The `N=$ARGUMENTS` form is safe even when `$ARGUMENTS` is empty — the Makefile falls back to 20 in that case.
+
+Run exactly this one command:
+
 ```!
-docker exec fraud-mcp-gateway python -c "
-import sqlite3
-c = sqlite3.connect('/app/audit/audit.db')
-for row in c.execute('SELECT ts, sub, server, tool, status, latency_ms FROM audit_events ORDER BY ts DESC LIMIT ${ARGUMENTS:-20}'):
-    print(f'{row[0]}  {row[1]:<24}  {row[2]:<14}  {row[3]:<28}  {row[4]:<6}  {row[5]}ms')
-"
+cd ~/Desktop/iceberg-workspace/fincrime-secured-mcp && make audit-tail N=$ARGUMENTS
 ```
 
-If the container is not running, tell the user to run `/fraud-stack-up` or `make compose-up` from the repo root and try again.
+If `cd` fails because the repo lives elsewhere, ask the user for the correct path.
+
+If `docker compose exec` reports the gateway container is not running, tell the user to run `/fraud-stack-up` or `make compose-up` from the repo root and try again.

@@ -3,7 +3,7 @@ VENV ?= .venv
 PIP := $(VENV)/bin/pip
 PY := $(VENV)/bin/python
 
-.PHONY: help install lint test typecheck clean register-plugin load-fixtures validate-evals evals evals-smoke gen-keys compose-up compose-down compose-logs compose-ps
+.PHONY: help install lint test typecheck clean register-plugin load-fixtures validate-evals evals evals-smoke gen-keys compose-up compose-down compose-logs compose-ps audit-tail
 
 help:
 	@echo "Targets:"
@@ -22,6 +22,7 @@ help:
 	@echo "  validate-evals   - lint all eval dataset YAMLs"
 	@echo "  evals            - run full eval suite (US-030)"
 	@echo "  evals-smoke      - run smoke subset of evals (US-030)"
+	@echo "  audit-tail       - show last N audit rows (N=20 default)"
 
 $(VENV)/bin/activate:
 	$(PYTHON) -m venv $(VENV)
@@ -72,3 +73,7 @@ evals: $(VENV)/bin/activate
 
 evals-smoke: $(VENV)/bin/activate
 	$(PY) -m evals.run --smoke
+
+N ?= 20
+audit-tail:
+	$(PYTHON) scripts/audit_tail.py -n $(if $(strip $(N)),$(N),20)
