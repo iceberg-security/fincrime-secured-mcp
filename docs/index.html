@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>fraud-copilot-oss — The agentic fraud copilot regulated industries can actually ship</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #07080c;
+    --bg-1: #0c0f17;
+    --bg-2: #11151f;
+    --surface: rgba(255,255,255,0.04);
+    --surface-2: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #e9ecf3;
+    --text-dim: #a4adbe;
+    --text-mute: #6b7387;
+    --accent: #7c8cff;
+    --accent-2: #50e3c2;
+    --accent-3: #ffb86b;
+    --danger: #ff6b8a;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --shadow: 0 30px 80px -20px rgba(0,0,0,0.6);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-0);
+    color: var(--text);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ----- Backgrounds & atmospherics ----- */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(900px 600px at 12% -10%, rgba(124,140,255,0.18), transparent 60%),
+      radial-gradient(700px 500px at 95% 5%, rgba(80,227,194,0.10), transparent 65%),
+      radial-gradient(800px 600px at 50% 110%, rgba(255,184,107,0.08), transparent 60%),
+      var(--bg-0);
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  }
+
+  /* ----- Layout ----- */
+  .container { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+  section { padding: 110px 0; position: relative; }
+  section + section { border-top: 1px solid var(--border); }
+
+  /* ----- Nav ----- */
+  nav.top {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(18px);
+    background: rgba(7,8,12,0.7);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.top .inner { display: flex; align-items: center; justify-content: space-between; padding: 18px 32px; max-width: 1240px; margin: 0 auto; }
+  .logo { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: -0.01em; }
+  .logo-mark {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: conic-gradient(from 210deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
+    position: relative;
+  }
+  .logo-mark::after {
+    content: ""; position: absolute; inset: 4px; border-radius: 5px;
+    background: var(--bg-0);
+  }
+  .logo-mark::before {
+    content: ""; position: absolute; inset: 9px; border-radius: 50%;
+    background: var(--text);
+  }
+  nav.top a {
+    color: var(--text-dim); text-decoration: none; font-size: 14px; margin-left: 28px;
+    transition: color 0.2s;
+  }
+  nav.top a:hover { color: var(--text); }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 100px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    font-size: 12px; color: var(--text-dim);
+  }
+  .pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ok); box-shadow: 0 0 8px var(--ok);
+  }
+
+  /* ----- Hero ----- */
+  .hero { padding: 80px 0 60px; text-align: center; position: relative; overflow: hidden; }
+  .hero .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 16px; border-radius: 100px;
+    background: rgba(124,140,255,0.08);
+    border: 1px solid rgba(124,140,255,0.25);
+    color: var(--accent);
+    font-size: 13px; font-weight: 500;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-size: clamp(40px, 6vw, 72px); line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    margin: 0 0 24px;
+    background: linear-gradient(180deg, #fff 30%, #a4adbe);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(120deg, var(--accent), var(--accent-2), var(--accent-3));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p.lead {
+    font-size: 20px; color: var(--text-dim);
+    max-width: 740px; margin: 0 auto 36px;
+  }
+  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 24px; border-radius: 12px;
+    font-weight: 600; font-size: 15px;
+    text-decoration: none; transition: all 0.2s;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: linear-gradient(180deg, var(--accent), #5d6cf0);
+    color: white;
+    box-shadow: 0 6px 24px -8px rgba(124,140,255,0.6);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 30px -8px rgba(124,140,255,0.8); }
+  .btn-ghost {
+    border-color: var(--border-strong);
+    color: var(--text);
+    background: var(--surface);
+  }
+  .btn-ghost:hover { background: var(--surface-2); border-color: rgba(255,255,255,0.2); }
+
+  .hero-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+    margin-top: 64px; padding-top: 48px;
+    border-top: 1px solid var(--border);
+  }
+  .stat .num {
+    font-size: 36px; font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(120deg, #fff, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat .label { font-size: 13px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+
+  /* ----- Section headers ----- */
+  .section-head { max-width: 780px; margin: 0 auto 64px; text-align: center; }
+  .section-head .kicker {
+    color: var(--accent-2); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .section-head h2 {
+    font-size: clamp(32px, 4vw, 48px); margin: 0 0 16px;
+    letter-spacing: -0.025em; font-weight: 700;
+  }
+  .section-head p { font-size: 18px; color: var(--text-dim); margin: 0; }
+
+  /* ----- Audience cards ----- */
+  .audience-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .audience-card {
+    padding: 32px 26px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .audience-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.4s;
+  }
+  .audience-card:hover { transform: translateY(-4px); border-color: var(--border-strong); }
+  .audience-card:hover::before { transform: scaleX(1); }
+  .audience-card.customer::before { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .audience-card.developer::before { background: linear-gradient(90deg, var(--accent-2), var(--accent-3)); }
+  .audience-card.security::before { background: linear-gradient(90deg, var(--accent-3), var(--danger)); }
+  .audience-card.fraud::before { background: linear-gradient(90deg, var(--danger), var(--accent)); }
+
+  .audience-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    font-size: 22px;
+  }
+  .audience-card h3 { margin: 0 0 6px; font-size: 18px; letter-spacing: -0.01em; }
+  .audience-card .role { font-size: 12px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+  .audience-card ul { margin: 0; padding: 0; list-style: none; }
+  .audience-card li {
+    font-size: 14px; color: var(--text-dim);
+    padding: 8px 0; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .audience-card li:first-child { border-top: 0; padding-top: 0; }
+  .audience-card li::before {
+    content: ""; flex-shrink: 0;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent-2);
+    margin-top: 8px;
+  }
+
+  /* ----- Flow / Process ----- */
+  .flow-stage {
+    margin: 0 auto;
+    max-width: 1080px;
+    padding: 36px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px solid var(--border);
+  }
+  .flow-row {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 28px;
+    align-items: center; padding: 24px 0;
+    border-top: 1px dashed var(--border);
+  }
+  .flow-row:first-of-type { border-top: 0; }
+  .flow-actor {
+    padding: 20px; border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .flow-actor h4 { margin: 0 0 6px; font-size: 15px; letter-spacing: -0.01em; }
+  .flow-actor .role { font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+  .flow-actor p { margin: 0; font-size: 13px; color: var(--text-dim); }
+  .flow-arrow {
+    text-align: center; color: var(--accent-2);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .flow-arrow svg { width: 80px; height: 16px; }
+
+  /* ----- Architecture diagram ----- */
+  .arch {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .arch-layer {
+    position: relative;
+    padding: 26px 28px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.01));
+    border: 1px solid var(--border);
+  }
+  .arch-layer .layer-tag {
+    position: absolute; top: -10px; left: 24px;
+    padding: 4px 12px; border-radius: 100px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+    background: var(--bg-1); border: 1px solid var(--border-strong);
+    color: var(--accent-2);
+  }
+  .arch-head { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; margin-bottom: 16px; }
+  .arch-head h4 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
+  .arch-head .why { font-size: 13px; color: var(--text-mute); }
+  .arch-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(124,140,255,0.07);
+    border: 1px solid rgba(124,140,255,0.18);
+    color: var(--text);
+    font-size: 13px; font-weight: 500;
+  }
+  .chip.green { background: rgba(80,227,194,0.07); border-color: rgba(80,227,194,0.20); }
+  .chip.orange { background: rgba(255,184,107,0.07); border-color: rgba(255,184,107,0.22); }
+  .chip.red { background: rgba(255,107,138,0.07); border-color: rgba(255,107,138,0.20); }
+  .chip.mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  .arch-connector {
+    display: flex; justify-content: center; align-items: center;
+    height: 28px; gap: 12px;
+    font-size: 11px; color: var(--text-mute);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    font-weight: 600;
+  }
+  .arch-connector::before, .arch-connector::after {
+    content: ""; flex: 0 0 60px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+  }
+
+  /* ----- Capabilities grid ----- */
+  .cap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .cap-card {
+    padding: 30px 26px; border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .cap-card:hover { transform: translateY(-3px); border-color: var(--border-strong); }
+  .cap-card h4 { margin: 12px 0 8px; font-size: 17px; letter-spacing: -0.01em; }
+  .cap-card p { margin: 0; font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+  .cap-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    background: linear-gradient(135deg, rgba(124,140,255,0.15), rgba(80,227,194,0.1));
+    border: 1px solid var(--border);
+  }
+
+  /* ----- Investigation walkthrough ----- */
+  .walkthrough {
+    max-width: 1080px; margin: 0 auto;
+    display: grid; grid-template-columns: 280px 1fr; gap: 32px;
+  }
+  .walk-steps { display: flex; flex-direction: column; gap: 6px; }
+  .walk-step {
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .walk-step:hover { border-color: var(--border-strong); }
+  .walk-step.active {
+    background: linear-gradient(135deg, rgba(124,140,255,0.18), rgba(80,227,194,0.08));
+    border-color: rgba(124,140,255,0.4);
+  }
+  .walk-step .num { color: var(--text-mute); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; }
+  .walk-step h5 { margin: 4px 0 0; font-size: 14px; font-weight: 600; }
+  .walk-step.active h5 { color: white; }
+
+  .walk-panel {
+    padding: 32px; border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--border);
+    min-height: 340px;
+  }
+  .walk-panel .step-tag {
+    display: inline-block; padding: 4px 12px; border-radius: 100px;
+    background: rgba(80,227,194,0.1); border: 1px solid rgba(80,227,194,0.25);
+    font-size: 11px; font-weight: 600; color: var(--accent-2); letter-spacing: 0.1em;
+  }
+  .walk-panel h3 { margin: 14px 0 8px; font-size: 22px; letter-spacing: -0.01em; }
+  .walk-panel .desc { color: var(--text-dim); font-size: 15px; margin-bottom: 24px; }
+  .walk-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .walk-output {
+    padding: 16px 18px; border-radius: 10px;
+    background: rgba(0,0,0,0.35); border: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--text-dim); line-height: 1.7;
+  }
+  .walk-output .k { color: var(--accent); }
+  .walk-output .v { color: var(--accent-2); }
+  .walk-output .w { color: var(--warn); }
+  .walk-output .r { color: var(--danger); }
+
+  /* ----- Personas / Eval scenarios ----- */
+  .personas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .persona {
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
+    transition: all 0.3s;
+  }
+  .persona:hover { transform: translateY(-3px); border-color: var(--border-strong); }
+  .persona-tag {
+    display: inline-block;
+    padding: 4px 10px; border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600;
+    background: rgba(255,184,107,0.1); color: var(--accent-3);
+    border: 1px solid rgba(255,184,107,0.25);
+    margin-bottom: 14px;
+  }
+  .persona.red .persona-tag { background: rgba(255,107,138,0.1); color: var(--danger); border-color: rgba(255,107,138,0.25); }
+  .persona.green .persona-tag { background: rgba(74,222,128,0.1); color: var(--ok); border-color: rgba(74,222,128,0.25); }
+  .persona.blue .persona-tag { background: rgba(124,140,255,0.1); color: var(--accent); border-color: rgba(124,140,255,0.25); }
+  .persona h4 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.01em; }
+  .persona p { margin: 0; font-size: 13px; color: var(--text-dim); }
+
+  /* ----- Security spine ----- */
+  .spine-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 1080px; margin: 0 auto; }
+  .spine-item {
+    padding: 28px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(124,140,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .spine-item .marker {
+    position: absolute; top: -1px; left: -1px; bottom: -1px; width: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    border-radius: 16px 0 0 16px;
+  }
+  .spine-item h4 { margin: 0 0 8px; font-size: 17px; letter-spacing: -0.01em; }
+  .spine-item p { margin: 0; font-size: 14px; color: var(--text-dim); line-height: 1.65; }
+  .spine-item .meta { margin-top: 14px; font-size: 12px; color: var(--text-mute); font-family: 'JetBrains Mono', monospace; }
+
+  /* ----- Final CTA ----- */
+  .final-cta {
+    text-align: center;
+    padding: 80px 40px;
+    border-radius: 24px;
+    background:
+      radial-gradient(800px 400px at 50% -20%, rgba(124,140,255,0.18), transparent 70%),
+      linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+    border: 1px solid var(--border-strong);
+  }
+  .final-cta h2 { font-size: clamp(32px, 4vw, 44px); margin: 0 0 18px; letter-spacing: -0.025em; }
+  .final-cta p { color: var(--text-dim); font-size: 17px; margin: 0 0 32px; max-width: 580px; margin-left: auto; margin-right: auto; }
+
+  footer {
+    padding: 40px 0;
+    text-align: center;
+    color: var(--text-mute); font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--text-dim); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  /* ----- Responsive ----- */
+  @media (max-width: 920px) {
+    .audience-grid, .cap-grid, .personas { grid-template-columns: repeat(2, 1fr); }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .walkthrough { grid-template-columns: 1fr; }
+    .spine-grid { grid-template-columns: 1fr; }
+    .flow-row { grid-template-columns: 1fr; }
+    .flow-arrow { transform: rotate(90deg); padding: 12px 0; }
+    nav.top .nav-links { display: none; }
+  }
+  @media (max-width: 560px) {
+    .audience-grid, .cap-grid, .personas { grid-template-columns: 1fr; }
+    .hero-stats { grid-template-columns: 1fr; }
+    section { padding: 70px 0; }
+  }
+
+  /* ----- Anim ----- */
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  .float { animation: float 5s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="inner">
+    <div class="logo">
+      <div class="logo-mark"></div>
+      <span>fraud-copilot-oss</span>
+    </div>
+    <div class="nav-links">
+      <a href="#audiences">For You</a>
+      <a href="#process">How It Works</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#capabilities">Capabilities</a>
+      <a href="#trust">Trust & Audit</a>
+      <a href="docs.html" style="color: var(--accent-2);">Docs →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ───────── Hero ───────── -->
+<section class="hero">
+  <div class="container">
+    <div class="eyebrow">
+      <span class="dot" style="width:6px;height:6px;background:var(--accent-2);border-radius:50%;display:inline-block;"></span>
+      Open source · Apache 2.0 · Built for regulated industries
+    </div>
+    <h1>The agentic <span class="grad">fraud-investigation copilot</span><br/>regulated industries can actually ship.</h1>
+    <p class="lead">
+      A Claude-powered investigation agent with the auth, RBAC, and audit plumbing that banks,
+      brokers, and fintechs require — pre-built. Drop in your data sources. Keep your security posture.
+    </p>
+    <div class="hero-ctas">
+      <a class="btn btn-primary" href="#process">See the investigation flow →</a>
+      <a class="btn btn-ghost" href="#architecture">Tour the architecture</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="num">&lt;30s</div>
+        <div class="label">Cold-start to full stack</div>
+      </div>
+      <div class="stat">
+        <div class="num">6</div>
+        <div class="label">Pre-wired data domains</div>
+      </div>
+      <div class="stat">
+        <div class="num">100%</div>
+        <div class="label">Audited tool calls</div>
+      </div>
+      <div class="stat">
+        <div class="num">1hr</div>
+        <div class="label">To add your data source</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Audiences ───────── -->
+<section id="audiences">
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">Built for the people on the hook</div>
+      <h2>One copilot. Four sets of stakeholders. All of them say yes.</h2>
+      <p>Every regulated AI workflow stalls somewhere between the analyst's wishlist and the CISO's approval. This is what makes it through both.</p>
+    </div>
+
+    <div class="audience-grid">
+      <div class="audience-card customer">
+        <div class="audience-icon">🏦</div>
+        <div class="role">For Customers</div>
+        <h3>From 12 tabs to one investigation</h3>
+        <ul>
+          <li>Analysts assemble alert context in minutes, not hours</li>
+          <li>Same audit trail your regulator already accepts</li>
+          <li>Ship a working prototype in a sprint, not a quarter</li>
+          <li>No vendor lock-in — own the model, the data, the agent</li>
+        </ul>
+      </div>
+
+      <div class="audience-card developer">
+        <div class="audience-icon">⚙️</div>
+        <div class="role">For Developers</div>
+        <h3>A reference you can read in one sitting</h3>
+        <ul>
+          <li>MCP gateway under 500 lines of core code</li>
+          <li>Python everywhere — FastAPI, FastMCP, pyseto</li>
+          <li>600+ test cases, deterministic eval suite</li>
+          <li>Plug your own MCP server in under an hour</li>
+        </ul>
+      </div>
+
+      <div class="audience-card security">
+        <div class="audience-icon">🛡️</div>
+        <div class="role">For Security Leaders</div>
+        <h3>The plumbing your auditor will sign off on</h3>
+        <ul>
+          <li>PASETO v4.public — no JWT algorithm confusion</li>
+          <li>Two keypairs: user token ≠ service-to-service token</li>
+          <li>Replay protection by default, append-only audit</li>
+          <li>Threat model maps every trust boundary</li>
+        </ul>
+      </div>
+
+      <div class="audience-card fraud">
+        <div class="audience-icon">🎯</div>
+        <div class="role">For Fraud Leaders</div>
+        <h3>The agent finally speaks investigation</h3>
+        <ul>
+          <li>Six personas: mule, sanctions, ATO, structuring, more</li>
+          <li>Verify-output flags every unsupported claim</li>
+          <li>Action tools gated behind human approval</li>
+          <li>Eval suite scores grounding and reasoning quality</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Process / Flow ───────── -->
+<section id="process">
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">The investigation, end to end</div>
+      <h2>From alert to SAR draft — in one continuous, audited flow.</h2>
+      <p>An analyst kicks off an investigation. The agent runs six structured subskills. Every tool call is signed, role-checked, and audited. Every claim in the final narrative is verified against logged evidence.</p>
+    </div>
+
+    <div class="flow-stage">
+      <div class="flow-row">
+        <div class="flow-actor">
+          <div class="role">Analyst</div>
+          <h4>"Investigate customer cust-mule-01"</h4>
+          <p>One command in Claude Code. No context-switching, no copy-paste, no swivel-chair workflow.</p>
+        </div>
+        <div class="flow-arrow">
+          OIDC bearer
+          <svg viewBox="0 0 80 16"><path d="M2 8 H72 M64 2 L72 8 L64 14" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        </div>
+        <div class="flow-actor">
+          <div class="role">Auth Gateway</div>
+          <h4>Mints a 5-minute user PASETO</h4>
+          <p>Validates the OIDC token, then signs an Ed25519 PASETO v4.public with the analyst's identity and group claims.</p>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-actor">
+          <div class="role">Orchestrator Skill</div>
+          <h4>Routes to six subskills, in order</h4>
+          <p>gather-profile → transactions → osint → sanctions → narrative → verify-output. Plain-text routing only — ≤100 lines.</p>
+        </div>
+        <div class="flow-arrow">
+          user PASETO
+          <svg viewBox="0 0 80 16"><path d="M2 8 H72 M64 2 L72 8 L64 14" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        </div>
+        <div class="flow-actor">
+          <div class="role">MCP Gateway</div>
+          <h4>Verify · replay-check · RBAC · re-sign · audit</h4>
+          <p>One algorithm, one path. Rejects replays via a 10k-entry jti cache. Re-signs a 60-second service token with a separate keypair.</p>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-actor">
+          <div class="role">6 Downstream MCP Servers</div>
+          <h4>customer_data · transactions · kyc · sanctions · osint · case_actions</h4>
+          <p>FastMCP servers each wrapping a domain. Every call validated against the service token. case_actions additionally requires <span class="mono" style="color:var(--warn);">human_approval=true</span>.</p>
+        </div>
+        <div class="flow-arrow">
+          service PASETO
+          <svg viewBox="0 0 80 16"><path d="M2 8 H72 M64 2 L72 8 L64 14" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        </div>
+        <div class="flow-actor">
+          <div class="role">Your Backends</div>
+          <h4>Swap in real systems in &lt;1 hour</h4>
+          <p>Mocks ship deterministic; integrators replace them with their core banking, KYC vendor, watchlist provider, case-management system.</p>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-actor">
+          <div class="role">Verify-Output Skill</div>
+          <h4>Annotates every unsupported claim</h4>
+          <p>Reads the audit log, checks each factual claim in the SAR narrative against the tool results that actually returned. Annotate-not-block in v1.</p>
+        </div>
+        <div class="flow-arrow">
+          audit + spans
+          <svg viewBox="0 0 80 16"><path d="M2 8 H72 M64 2 L72 8 L64 14" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        </div>
+        <div class="flow-actor">
+          <div class="role">Audit Store & Grafana</div>
+          <h4>Append-only. No DELETE method.</h4>
+          <p>SQLite default, ClickHouse opt-in. Provisioned Grafana panels: per-user tool calls, p95 latency, denied-by-role, audit volume.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Walkthrough ───────── -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">A real mule-account investigation</div>
+      <h2>What the analyst sees. What the gateway records.</h2>
+      <p>Six subskills run in sequence. Tap a step to see what tools fire and what the audit log captures.</p>
+    </div>
+
+    <div class="walkthrough">
+      <div class="walk-steps">
+        <div class="walk-step active" data-step="1"><div class="num">STEP 01</div><h5>Gather customer profile</h5></div>
+        <div class="walk-step" data-step="2"><div class="num">STEP 02</div><h5>Analyze transactions</h5></div>
+        <div class="walk-step" data-step="3"><div class="num">STEP 03</div><h5>Check OSINT signals</h5></div>
+        <div class="walk-step" data-step="4"><div class="num">STEP 04</div><h5>Screen sanctions</h5></div>
+        <div class="walk-step" data-step="5"><div class="num">STEP 05</div><h5>Draft SAR narrative</h5></div>
+        <div class="walk-step" data-step="6"><div class="num">STEP 06</div><h5>Verify output</h5></div>
+      </div>
+
+      <div class="walk-panel" id="walkPanel">
+        <span class="step-tag">SUBSKILL 1 of 6</span>
+        <h3>Gather customer profile</h3>
+        <p class="desc">First call out — the orchestrator always invokes this. Pulls identity, accounts, and device history through the customer_data MCP server. Every downstream subskill reads from this baseline.</p>
+        <div class="walk-tools">
+          <span class="chip mono">customer_data.get_customer</span>
+          <span class="chip mono">customer_data.list_accounts</span>
+          <span class="chip mono">customer_data.get_device_history</span>
+        </div>
+        <div class="walk-output">
+<span class="k">[audit]</span> 2026-05-26T14:02:11Z  user=alice@bank  role=analyst  jti=01HF...8K2  trace=4c91a...
+  → mcp.gateway POST /mcp/customer_data
+  → tool=get_customer  args={customer_id:"cust-mule-01"}
+  → status=<span class="v">200 OK</span>  latency_ms=42
+  → re-signed service PASETO (TTL 60s, keypair=svc-ed25519-1)
+  → audit row id=audit-7f2c... (append-only)
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Architecture ───────── -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">The stack, layer by layer</div>
+      <h2>Production-shaped from the first commit.</h2>
+      <p>Fourteen services. One docker compose. Read top to bottom — every layer earns its place.</p>
+    </div>
+
+    <div class="arch">
+      <div class="arch-layer">
+        <span class="layer-tag">Layer 1 · Agent</span>
+        <div class="arch-head">
+          <h4>Claude Code Plugin</h4>
+          <span class="why">XML-structured skills · tied to git commit · never templated</span>
+        </div>
+        <div class="arch-chips">
+          <span class="chip">Orchestrator (≤100 LOC)</span>
+          <span class="chip">5 investigation subskills</span>
+          <span class="chip green">verify-output meta-skill</span>
+          <span class="chip orange">Claude Opus 4.7 default</span>
+        </div>
+      </div>
+      <div class="arch-connector">OIDC bearer → user PASETO (5 min)</div>
+
+      <div class="arch-layer">
+        <span class="layer-tag">Layer 2 · Identity</span>
+        <div class="arch-head">
+          <h4>Auth Gateway</h4>
+          <span class="why">FastAPI · Ed25519 · publishes verify key at /.well-known</span>
+        </div>
+        <div class="arch-chips">
+          <span class="chip">OIDC bearer validation</span>
+          <span class="chip">PASETO v4.public mint</span>
+          <span class="chip">Group-claim mapping</span>
+          <span class="chip mono">TTL 5 min</span>
+        </div>
+      </div>
+      <div class="arch-connector">user PASETO + JSON-RPC</div>
+
+      <div class="arch-layer" style="background: linear-gradient(180deg, rgba(124,140,255,0.10), rgba(124,140,255,0.02));">
+        <span class="layer-tag">Layer 3 · The security spine</span>
+        <div class="arch-head">
+          <h4>MCP Gateway <span style="color:var(--accent-2); font-size: 12px; font-weight: 400; margin-left: 8px;">≤500 LOC core</span></h4>
+          <span class="why">PASETO verify · jti replay · RBAC enforce · re-sign · audit emit</span>
+        </div>
+        <div class="arch-chips">
+          <span class="chip green">jti replay cache (LRU 10k)</span>
+          <span class="chip green">RBAC hot-reload (YAML)</span>
+          <span class="chip green">Re-sign service PASETO</span>
+          <span class="chip green">Audit emit per call</span>
+          <span class="chip">OpenTelemetry traces</span>
+        </div>
+      </div>
+      <div class="arch-connector">service PASETO (60s, separate keypair)</div>
+
+      <div class="arch-layer">
+        <span class="layer-tag">Layer 4 · Data domains</span>
+        <div class="arch-head">
+          <h4>6 Downstream MCP Servers</h4>
+          <span class="why">FastMCP · per-domain · validates service token</span>
+        </div>
+        <div class="arch-chips">
+          <span class="chip">customer_data</span>
+          <span class="chip">transactions</span>
+          <span class="chip">kyc</span>
+          <span class="chip">sanctions</span>
+          <span class="chip">osint</span>
+          <span class="chip red">case_actions · human_approval required</span>
+        </div>
+      </div>
+      <div class="arch-connector">HTTP (loopback / cluster-local)</div>
+
+      <div class="arch-layer">
+        <span class="layer-tag">Layer 5 · Backends (swap in yours)</span>
+        <div class="arch-head">
+          <h4>Mock APIs · Replaced by your real systems</h4>
+          <span class="why">Pure FastAPI · deterministic per customer_id · 6 personas</span>
+        </div>
+        <div class="arch-chips">
+          <span class="chip orange">Core banking</span>
+          <span class="chip orange">KYC vendor</span>
+          <span class="chip orange">Watchlist provider</span>
+          <span class="chip orange">Device intelligence</span>
+          <span class="chip orange">Case management</span>
+          <span class="chip orange">Your other systems</span>
+        </div>
+      </div>
+
+      <div class="arch-connector">audit events · OTel spans</div>
+
+      <div class="arch-layer">
+        <span class="layer-tag">Layer 6 · Observability</span>
+        <div class="arch-head">
+          <h4>Audit Store + Grafana</h4>
+          <span class="why">SQLite default · ClickHouse opt-in · provisioned dashboards</span>
+        </div>
+        <div class="arch-chips">
+          <span class="chip">Per-user tool counts</span>
+          <span class="chip">p50/p95 latency by tool</span>
+          <span class="chip">Denied-by-role stacked</span>
+          <span class="chip">Audit volume per day</span>
+          <span class="chip red">No DELETE method (append-only)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Capabilities ───────── -->
+<section id="capabilities">
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">What ships in the box</div>
+      <h2>Not a demo. A production-shaped reference.</h2>
+      <p>Every capability below is implemented, tested, and documented with an ADR explaining why.</p>
+    </div>
+
+    <div class="cap-grid">
+      <div class="cap-card">
+        <div class="cap-icon">🔐</div>
+        <h4>Short-lived signed tokens</h4>
+        <p>PASETO v4.public, Ed25519, 5-minute user TTL, 60-second service TTL. Two distinct keypairs. No JWT, no algorithm confusion.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">📋</div>
+        <h4>Declarative RBAC</h4>
+        <p>YAML with role inheritance and group-claim mapping. Hot-reloaded on file change. Reviewed in normal PR flow — no UI panel, no Terraform indirection.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">📜</div>
+        <h4>Append-only audit</h4>
+        <p>Every gateway call lands in the store. SQLite default, ClickHouse opt-in. Public surface has no DELETE — append-only by design.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🔁</div>
+        <h4>Replay protection</h4>
+        <p>10,000-entry LRU cache keyed by token <span class="mono">jti</span>. Second sighting inside TTL is rejected. Lives in the gateway and only the gateway.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🧠</div>
+        <h4>Verify-output meta-skill</h4>
+        <p>Last subskill in every investigation. Walks the audit log, checks every claim against logged tool results, annotates unsupported claims inline.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">✋</div>
+        <h4>Human-in-the-loop actions</h4>
+        <p>case_actions tools require <span class="mono">human_approval=true</span> on the claim. The harness does not mint approved tokens — by design.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🧪</div>
+        <h4>Deterministic eval suite</h4>
+        <p>Six YAML datasets, four scorers (tool correctness, ordering, grounding, reasoning). PR-gate runs deterministic; nightly runs against the live model.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">📊</div>
+        <h4>Pre-provisioned Grafana</h4>
+        <p>Dashboard panels for tool counts, latency, denied-by-role, audit volume. Works against SQLite and ClickHouse out of the box.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🔌</div>
+        <h4>Add a data source in &lt;1 hour</h4>
+        <p>Define the MCP tool schema. Drop a server using the shared factory. Declare in rbac.yaml. Reference from a subskill. Each step has a verify command.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Scenarios / Personas ───────── -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">Six built-in investigation scenarios</div>
+      <h2>From the boring "all clear" to the messy edge cases.</h2>
+      <p>Each persona is deterministic, cross-server-consistent, and covered by an end-to-end eval. Train the agent. Train your team. Both.</p>
+    </div>
+
+    <div class="personas">
+      <div class="persona green">
+        <span class="persona-tag">clean</span>
+        <h4>Clean customer</h4>
+        <p>The agent should not invent risk. Validates that low-signal cases come back as "no action." Tests for over-eager hallucination.</p>
+      </div>
+      <div class="persona">
+        <span class="persona-tag">mule</span>
+        <h4>Mule account</h4>
+        <p>Inbound transfers from many small senders, fast pass-through. The agent must spot the layering and reference specific transactions.</p>
+      </div>
+      <div class="persona red">
+        <span class="persona-tag">sanctions_hit</span>
+        <h4>Sanctions hit</h4>
+        <p>Counterparty matches an OFAC-style watchlist. Tests sanctions-screening ordering and forces an action gated behind human approval.</p>
+      </div>
+      <div class="persona red">
+        <span class="persona-tag">ato</span>
+        <h4>Account takeover</h4>
+        <p>New device, new IP, new beneficiary. Validates device-history pivot and contextual reasoning across customer + transaction signals.</p>
+      </div>
+      <div class="persona">
+        <span class="persona-tag">structuring</span>
+        <h4>Structuring</h4>
+        <p>Deposits just under the reporting threshold. The agent must aggregate across days and flag the pattern, not the individual transactions.</p>
+      </div>
+      <div class="persona blue">
+        <span class="persona-tag">synthetic_id</span>
+        <h4>Synthetic identity</h4>
+        <p>Real SSN, fabricated name, thin file. Tests KYC + OSINT cross-referencing and forces the agent to distinguish "thin" from "synthetic."</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Trust / Security spine ───────── -->
+<section id="trust">
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">The security review your auditor will run anyway</div>
+      <h2>Every load-bearing decision has an ADR.</h2>
+      <p>Seven Architecture Decision Records. One threat model with all seven trust boundaries mapped to their mitigation.</p>
+    </div>
+
+    <div class="spine-grid">
+      <div class="spine-item">
+        <div class="marker"></div>
+        <h4>One algorithm. One path.</h4>
+        <p>PASETO v4.public (Ed25519) exclusively — never JWT. Typed claims, no algorithm-confusion surface. Two distinct keypairs: one for the user token, one for service-to-service. The MCP gateway never reissues the user token; it re-signs a fresh service token with its own private key.</p>
+        <div class="meta">ADR-0002 · paseto-over-jwt.md</div>
+      </div>
+      <div class="spine-item">
+        <div class="marker"></div>
+        <h4>Replay protection by default</h4>
+        <p>Every request carries a <span class="mono">jti</span>. The gateway holds an in-memory LRU of 10,000 entries and rejects the second sighting inside the TTL window. The cache lives in the gateway and only the gateway. No external state to compromise.</p>
+        <div class="meta">gateways/mcp/main.py</div>
+      </div>
+      <div class="spine-item">
+        <div class="marker"></div>
+        <h4>RBAC compliance teams can read</h4>
+        <p>Roles in <span class="mono">config/rbac.yaml</span> with inheritance and group-claim mapping. Hot-reloaded on file change. PRs reviewable by a compliance officer in the normal code-review flow — no UI panel to audit, no Terraform indirection.</p>
+        <div class="meta">ADR-0003 · yaml-rbac.md</div>
+      </div>
+      <div class="spine-item">
+        <div class="marker"></div>
+        <h4>Audit by default. No DELETE.</h4>
+        <p>Every gateway call lands in an audit store. SQLite default for laptop dev; ClickHouse opt-in for production scale. The module's public surface has no DELETE method. Append-only is enforced by absence, not by trigger.</p>
+        <div class="meta">ADR-0004 · sqlite-default-audit.md</div>
+      </div>
+      <div class="spine-item">
+        <div class="marker"></div>
+        <h4>Skills are repo-resident, not model-generated</h4>
+        <p>Every <span class="mono">SKILL.md</span> is read verbatim — never templated by the model. Each is tied to a git commit hash in the audit log. The threat model names skill-spoofing as a tracked boundary.</p>
+        <div class="meta">docs/threat-model.md</div>
+      </div>
+      <div class="spine-item">
+        <div class="marker"></div>
+        <h4>No PII in traces. By construction.</h4>
+        <p>OpenTelemetry attributes carry <span class="mono">mcp.server</span>, <span class="mono">mcp.tool</span>, <span class="mono">user.role</span>. <span class="mono">user.email</span> and <span class="mono">user.sub</span> are explicitly forbidden — the helper raises on violation.</p>
+        <div class="meta">gateways/common/otel.py</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Eval suite ───────── -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">The eval surface</div>
+      <h2>Score the agent on what actually matters.</h2>
+      <p>Four scorers, six datasets, headless harness. PR-gate runs deterministic; nightly runs against the live model.</p>
+    </div>
+
+    <div class="cap-grid">
+      <div class="cap-card">
+        <div class="cap-icon">✅</div>
+        <h4>tool_correctness</h4>
+        <p>Set comparison of expected tool calls vs. what the audit log actually recorded. Did the agent call the right tools, full stop.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🔢</div>
+        <h4>tool_ordering</h4>
+        <p>Dependent-ordering checks. Sanctions must be screened before the narrative is drafted. Profile must be gathered before transactions are analyzed.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🎯</div>
+        <h4>grounding</h4>
+        <p>LLM-judge per claim. Does every factual statement in the SAR trace back to a logged tool result? Uses cache_control on the rubric for cost.</p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">📈</div>
+        <h4>reasoning</h4>
+        <p>Five-dimension rubric, 1–5 each. Mean ≥ 4.0 to pass. Catches the failures the other three scorers miss — the report that's correct but unconvincing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Final CTA ───────── -->
+<section>
+  <div class="container">
+    <div class="final-cta">
+      <h2>Three commands. Full stack. Under 30 seconds.</h2>
+      <p>Clone it. Run it. Read the threat model. Then plug in your own data source and ship something your compliance team will actually approve.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="docs.html">Read the integrator docs →</a>
+        <a class="btn btn-ghost" href="https://github.com/iceberg-security/fincrime-secured-mcp">View on GitHub</a>
+      </div>
+      <div style="margin-top: 36px; display: inline-flex; gap: 8px; padding: 12px 20px; border-radius: 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim);">
+        <span style="color: var(--accent-2);">$</span> make install && make compose-up && make load-fixtures
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    fincrime-secured-mcp · Apache 2.0 · Built on Claude, MCP, FastAPI, PASETO, and a stack of open-source Python libraries · <a href="threat-model.md">Threat model</a> · <a href="adr/README.md">ADR index</a>
+  </div>
+</footer>
+
+<script>
+  // Walkthrough interactivity
+  const stepData = {
+    1: {
+      tag: 'SUBSKILL 1 of 6',
+      title: 'Gather customer profile',
+      desc: "First call out — the orchestrator always invokes this. Pulls identity, accounts, and device history through the customer_data MCP server. Every downstream subskill reads from this baseline.",
+      tools: ['customer_data.get_customer', 'customer_data.list_accounts', 'customer_data.get_device_history'],
+      log: `<span class="k">[audit]</span> 2026-05-26T14:02:11Z  user=alice@bank  role=analyst  jti=01HF...8K2  trace=4c91a...
+  → mcp.gateway POST /mcp/customer_data
+  → tool=get_customer  args={customer_id:"cust-mule-01"}
+  → status=<span class="v">200 OK</span>  latency_ms=42
+  → re-signed service PASETO (TTL 60s, keypair=svc-ed25519-1)
+  → audit row id=audit-7f2c... (append-only)`
+    },
+    2: {
+      tag: 'SUBSKILL 2 of 6',
+      title: 'Analyze transactions',
+      desc: 'Pulls 90 days of transaction history. Looks for fan-in/fan-out, pass-through behavior, structuring patterns. Anchors every observation to a transaction ID.',
+      tools: ['transactions.list_transactions', 'transactions.aggregate', 'transactions.get_counterparty'],
+      log: `<span class="k">[audit]</span> 2026-05-26T14:02:18Z  user=alice@bank  role=analyst
+  → tool=list_transactions  args={customer_id:"cust-mule-01",days:90}
+  → returned 247 transactions  fan-in ratio=18:1
+  <span class="k">[audit]</span> 2026-05-26T14:02:19Z
+  → tool=aggregate  args={window:"7d",op:"sum_in"}
+  → status=<span class="v">200 OK</span>  latency_ms=61
+  → pattern flagged: <span class="w">layering · pass-through</span>`
+    },
+    3: {
+      tag: 'SUBSKILL 3 of 6',
+      title: 'Check OSINT signals',
+      desc: 'Cross-references public records, news mentions, social signals. Returns only what the configured OSINT vendor permits — no scraping, no shadow data.',
+      tools: ['osint.search_name', 'osint.check_business_registry', 'osint.scan_news_mentions'],
+      log: `<span class="k">[audit]</span> 2026-05-26T14:02:23Z  user=alice@bank  role=analyst
+  → tool=search_name  args={name:"M. Doe",dob:"1991-03-04"}
+  → 2 matches  confidence=0.78
+  <span class="k">[audit]</span> 2026-05-26T14:02:24Z
+  → tool=scan_news_mentions  args={entity:"M. Doe"}
+  → returned 0 mentions  latency_ms=89`
+    },
+    4: {
+      tag: 'SUBSKILL 4 of 6',
+      title: 'Screen sanctions',
+      desc: 'Runs the customer and every observed counterparty through the watchlist provider. Hits are flagged hard — sanctions matches halt the rest of the flow until human review.',
+      tools: ['sanctions.screen_party', 'sanctions.screen_counterparties'],
+      log: `<span class="k">[audit]</span> 2026-05-26T14:02:29Z  user=alice@bank  role=analyst
+  → tool=screen_party  args={name:"M. Doe"}
+  → status=<span class="v">200 OK</span>  matches=[]
+  <span class="k">[audit]</span> 2026-05-26T14:02:30Z
+  → tool=screen_counterparties  args={count:18}
+  → <span class="r">SANCTIONS_MATCH</span> on counterparty cp-44ae
+  → halt + escalate to human review`
+    },
+    5: {
+      tag: 'SUBSKILL 5 of 6',
+      title: 'Draft SAR narrative',
+      desc: 'Composes a Suspicious Activity Report draft from the evidence assembled by the previous four subskills. Every claim must cite a tool result — the verifier checks.',
+      tools: ['draft_narrative (in-skill)'],
+      log: `<span class="k">[narrative]</span> drafted 612-word SAR section
+  → cites 18 transactions, 1 device event, 1 sanctions match
+  → tone: factual · regulator-ready
+  → output saved to plugin state · awaits verify-output`
+    },
+    6: {
+      tag: 'SUBSKILL 6 of 6 · META',
+      title: 'Verify output',
+      desc: 'Reads the audit log. Checks every factual claim in the SAR against a logged tool result. Flags unsupported claims inline — annotate-not-block in v1. The analyst sees what the model invented.',
+      tools: ['verify-output (meta)'],
+      log: `<span class="k">[verify]</span> claims=14  supported=13  unsupported=1
+  → claim #9: "customer opened account in 2018"
+  → <span class="w">⚠ no logged tool result supports this</span>
+  → annotated inline · analyst can correct before export
+  → final SAR signed off · audit chain closed`
+    }
+  };
+
+  document.querySelectorAll('.walk-step').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('.walk-step').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+      const d = stepData[s.dataset.step];
+      const panel = document.getElementById('walkPanel');
+      panel.innerHTML = `
+        <span class="step-tag">${d.tag}</span>
+        <h3>${d.title}</h3>
+        <p class="desc">${d.desc}</p>
+        <div class="walk-tools">${d.tools.map(t => `<span class="chip mono">${t}</span>`).join('')}</div>
+        <div class="walk-output">${d.log}</div>
+      `;
+    });
+  });
+</script>
+
+</body>
+</html>

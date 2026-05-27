@@ -3,6 +3,8 @@
 > **An open-source, agentic fraud-investigation copilot with the auth, RBAC, and
 > audit plumbing that regulated industries actually need.**
 
+**Showcase & integrator docs:** <https://iceberg-security.github.io/fincrime-secured-mcp/>
+
 Most open-source MCP demos skip the load-bearing security layer. This one
 ships it: a Claude Cowork plugin talks through an MCP gateway that mints
 short-lived PASETO tokens, enforces declarative RBAC, audits every call,
@@ -54,17 +56,6 @@ spans correlate every hop via the PASETO `trace_id` claim. The
 The full architecture and design rationale lives in
 [`tasks/prd-fraud-investigator-plugin.md`](tasks/prd-fraud-investigator-plugin.md)
 (see §5 for the canonical diagram).
-
----
-
-## Demo
-
-![Investigation walkthrough](docs/assets/demo.gif)
-
-*A 90-second screencast of an analyst triaging a mule-account alert.
-Source clip: [`docs/assets/demo.gif`](docs/assets/demo.gif) — replace with
-your own recording before launch. If the image fails to load, the
-[recording is also linked here](docs/assets/demo.gif).*
 
 ---
 

@@ -26,7 +26,8 @@ integrators swap for their real backend.
 `docker compose up` brings up the full stack in under 30 seconds. The
 eval suite ships with the repo. Apache 2.0.
 
-- **Repo**: <https://github.com/icebergsecurity/fraud-copilot-oss>
+- **Repo**: <https://github.com/iceberg-security/fincrime-secured-mcp>
+- **Site**: <https://iceberg-security.github.io/fincrime-secured-mcp/>
 - **Quickstart**: `make install && make compose-up && make load-fixtures`
 - **PRD**: [`tasks/prd-fraud-investigator-plugin.md`](../tasks/prd-fraud-investigator-plugin.md)
 - **Threat model**: [`docs/threat-model.md`](threat-model.md)
@@ -177,8 +178,8 @@ verification command.
 ## Where to start
 
 ```bash
-git clone https://github.com/icebergsecurity/fraud-copilot-oss
-cd fraud-copilot-oss
+git clone https://github.com/iceberg-security/fincrime-secured-mcp
+cd fincrime-secured-mcp
 make install
 make compose-up
 make load-fixtures
@@ -203,16 +204,6 @@ We are looking for:
 
 Open an issue if you are integrating against a real backend and hit a
 sharp edge — the goal is to round those off before v1.0.
-
-## Demo
-
-![Investigation walkthrough](assets/demo.gif)
-
-A 90-second screencast: an analyst triages a mule-account alert,
-watches the audit log fill in, sees the verifier flag one unsupported
-claim, and exports the SAR draft. Asset checked into
-[`docs/assets/`](assets/) — see
-[`docs/assets/README.md`](assets/README.md) for capture instructions.
 
 ## Credits
 
