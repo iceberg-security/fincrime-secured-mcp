@@ -148,17 +148,24 @@ def _sql_for_dialect(panel: dict[str, Any], ds_type: str) -> str:
     )
 
 
-def test_every_panel_has_sqlite_and_clickhouse_targets(panels: list[dict[str, Any]]) -> None:
-    """Dashboard must work against BOTH datasources (AC: 'SQLite by default and
-    ClickHouse when AUDIT_BACKEND=clickhouse'). Each panel declares one target
-    per dialect; Grafana fires the one matching the provisioned datasource."""
+def test_every_panel_has_exactly_one_sqlite_target(panels: list[dict[str, Any]]) -> None:
+    """Each panel must have EXACTLY ONE target — the SQLite one.
+
+    The dashboard previously carried a second ClickHouse target per panel for
+    the AUDIT_BACKEND=clickhouse path. But Grafana evaluates every target on a
+    panel, and on the default SQLite stack the ClickHouse target errors (no CH
+    client). A bar chart that receives that error frame fails x-field
+    resolution with "Configured x field not found" (see grafana/grafana#96821).
+    Hiding the target did not stop it. So the dashboard is SQLite-only: one
+    target per panel, no dead frame to break the charts. The ClickHouse
+    datasource + plugin stay provisioned (tests below) for operators who wire
+    up their own CH panels."""
     for p in panels:
-        types = {(t.get("datasource") or {}).get("type") for t in _targets(p)}
-        assert "frser-sqlite-datasource" in types, (
-            f"panel {p.get('title')!r} missing SQLite target"
-        )
-        assert "grafana-clickhouse-datasource" in types, (
-            f"panel {p.get('title')!r} missing ClickHouse target"
+        types = [(t.get("datasource") or {}).get("type") for t in _targets(p)]
+        assert types == ["frser-sqlite-datasource"], (
+            f"panel {p.get('title')!r} must have exactly one SQLite target "
+            f"(got {types}); a second/dead target breaks bar-chart x-field "
+            "resolution"
         )
 
 
@@ -173,41 +180,61 @@ def test_every_query_references_audit_events_table(panels: list[dict[str, Any]])
             )
 
 
+def test_every_sqlite_target_sets_querytype_and_rawquerytext(
+    panels: list[dict[str, Any]],
+) -> None:
+    """The frser-sqlite-datasource plugin reads ``rawQueryText`` + ``queryType``
+    (NOT the Grafana-native ``rawSql`` field). A SQLite target missing these
+    sends an empty query to the plugin → silent 'no data' panel. This is the
+    exact regression that left three of four panels blank in the field."""
+    for p in panels:
+        for t in _targets(p):
+            if (t.get("datasource") or {}).get("type") != "frser-sqlite-datasource":
+                continue
+            assert t.get("rawQueryText"), (
+                f"panel {p.get('title')!r} SQLite target missing rawQueryText "
+                "(frser plugin won't see rawSql)"
+            )
+            assert t.get("queryType") in ("table", "time series"), (
+                f"panel {p.get('title')!r} SQLite target queryType must be "
+                f"'table' or 'time series' (got {t.get('queryType')!r})"
+            )
+            # rawQueryText and rawSql must agree so the plugin and the
+            # schema-drift test above can't disagree on what's executed.
+            assert t.get("rawQueryText") == t.get("rawSql"), (
+                f"panel {p.get('title')!r} SQLite target rawQueryText != rawSql"
+            )
+
+
 # Per-AC panel queries:
 
 
 def test_tool_calls_per_user_panel_groups_by_sub(panels: list[dict[str, Any]]) -> None:
     panel = _panel_by_title(panels, "Tool calls per user (last 24h)")
-    for ds_type in ("frser-sqlite-datasource", "grafana-clickhouse-datasource"):
-        sql = _sql_for_dialect(panel, ds_type).lower()
-        assert "group by sub" in sql, f"{ds_type} target must GROUP BY sub"
-        assert "count(" in sql, f"{ds_type} target must use COUNT"
+    sql = _sql_for_dialect(panel, "frser-sqlite-datasource").lower()
+    assert "group by sub" in sql, "SQLite target must GROUP BY sub"
+    assert "count(" in sql, "SQLite target must use COUNT"
 
 
 def test_latency_panel_computes_p50_and_p95_by_tool(panels: list[dict[str, Any]]) -> None:
     panel = _panel_by_title(panels, "Latency p50 / p95 by tool (ms)")
     sqlite_sql = _sql_for_dialect(panel, "frser-sqlite-datasource").lower()
-    ch_sql = _sql_for_dialect(panel, "grafana-clickhouse-datasource").lower()
     assert "p50" in sqlite_sql and "p95" in sqlite_sql, (
         "SQLite latency query must compute p50 and p95"
     )
-    assert "latency_ms" in sqlite_sql and "latency_ms" in ch_sql
-    assert "quantile(0.5)" in ch_sql and "quantile(0.95)" in ch_sql, (
-        "ClickHouse uses quantile() for percentiles"
-    )
-    assert "tool" in sqlite_sql and "tool" in ch_sql, "grouped by tool"
+    assert "latency_ms" in sqlite_sql
+    assert "tool" in sqlite_sql, "grouped by tool"
 
 
 def test_denied_requests_panel_filters_status_denied_and_groups_by_role(
     panels: list[dict[str, Any]],
 ) -> None:
     panel = _panel_by_title(panels, "Denied requests by role (stacked)")
-    for ds_type in ("frser-sqlite-datasource", "grafana-clickhouse-datasource"):
-        sql = _sql_for_dialect(panel, ds_type).lower()
-        assert "status = 'denied'" in sql
-        assert "group by role" in sql, "must group by role per US-023 AC"
-        # Stacked bar — must surface deny_reason for stack segments.
-        assert "deny_reason" in sql
+    sql = _sql_for_dialect(panel, "frser-sqlite-datasource").lower()
+    assert "status = 'denied'" in sql
+    assert "group by role" in sql, "must group by role per US-023 AC"
+    # Stacked bar — must surface deny_reason for stack segments.
+    assert "deny_reason" in sql
 
 
 def test_denied_requests_panel_is_stacked(panels: list[dict[str, Any]]) -> None:
@@ -221,15 +248,39 @@ def test_denied_requests_panel_is_stacked(panels: list[dict[str, Any]]) -> None:
 def test_audit_volume_panel_buckets_by_day(panels: list[dict[str, Any]]) -> None:
     panel = _panel_by_title(panels, "Audit volume per day")
     sqlite_sql = _sql_for_dialect(panel, "frser-sqlite-datasource").lower()
-    ch_sql = _sql_for_dialect(panel, "grafana-clickhouse-datasource").lower()
-    # SQLite: date(ts) collapses to day; ClickHouse: toStartOfDay(ts).
+    # SQLite: date(ts) collapses to day.
     assert "date(ts)" in sqlite_sql
-    assert "tostartofday(ts)" in ch_sql
-    # time_series format so Grafana renders a chart, not a table.
-    for t in _targets(panel):
-        assert t.get("format") == "time_series", (
-            "audit-volume-per-day panel must request format=time_series"
-        )
+    # The panel renders a chart (not a table) because its panel *type* is
+    # "timeseries". The frser-sqlite-datasource plugin (v4.0.6) does NOT honour
+    # format=time_series for a 2-column daily aggregate — it crashes with "can
+    # not convert to wide series, expected long format series input". Instead
+    # the SQLite target uses format=table and DESIGNATES the time column via the
+    # plugin's `timeColumns` field, emitting an RFC3339 string the plugin parses
+    # as a timestamp (per the plugin docs: Unix-seconds OR RFC3339, never
+    # epoch-millis). ClickHouse's native plugin has no such limitation and keeps
+    # format=time_series.
+    assert panel.get("type") == "timeseries", (
+        "audit-volume-per-day must be a timeseries panel so it renders a chart"
+    )
+    sqlite_target = next(
+        t for t in _targets(panel)
+        if (t.get("datasource") or {}).get("type") == "frser-sqlite-datasource"
+    )
+    assert sqlite_target.get("format") == "table", (
+        "SQLite target must use format=table (format=time_series crashes the "
+        "frser plugin's long->wide conversion on a 2-column daily aggregate)"
+    )
+    # frser needs the time column explicitly designated, else the panel errors
+    # "Data is missing a time field".
+    assert "time" in (sqlite_target.get("timeColumns") or []), (
+        "SQLite target must list its time column in timeColumns so the "
+        "timeseries panel can find a time axis"
+    )
+    # RFC3339 text time column (NOT epoch-millis — the plugin rejects ms).
+    assert "t00:00:00z" in sqlite_sql, (
+        "SQLite time column must be an RFC3339 string "
+        "(date(ts) || 'T00:00:00Z'), which frser parses as a timestamp"
+    )
 
 
 # --------------------------------------------------------------------------- #
