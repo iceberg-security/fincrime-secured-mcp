@@ -53,9 +53,8 @@ spans correlate every hop via the PASETO `trace_id` claim. The
 [threat model](docs/threat-model.md) walks the trust boundaries; the
 [ADR index](docs/adr/README.md) explains every load-bearing choice.
 
-The full architecture and design rationale lives in
-[`tasks/prd-fraud-investigator-plugin.md`](tasks/prd-fraud-investigator-plugin.md)
-(see §5 for the canonical diagram).
+The full architecture and design rationale lives in the
+[threat model](docs/threat-model.md) and the [ADR index](docs/adr/README.md).
 
 ---
 
@@ -102,7 +101,7 @@ make evals-smoke    # deterministic eval suite — no API key required
 
 ## What's included
 
-Mirroring PRD §6 of [the source spec](tasks/prd-fraud-investigator-plugin.md):
+The layers that ship in this repo:
 
 | Layer | What ships | Where it lives |
 | --- | --- | --- |
@@ -210,9 +209,7 @@ subskill `SKILL.md`. Every step has a copy-paste verification command.
 - M2 (eval suite + scorers + CI): **shipped**
 - M3 (docs + launch artifacts): **shipped**
 
-See [`prd.json`](prd.json) and
-[`tasks/prd-fraud-investigator-plugin.md`](tasks/prd-fraud-investigator-plugin.md)
-for the full story-by-story plan.
+See the [launch post](docs/launch-post.md) for the full story.
 
 ---
 

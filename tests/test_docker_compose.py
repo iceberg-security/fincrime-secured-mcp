@@ -289,10 +289,13 @@ def test_dependency_order_respects_data_flow(services: dict[str, dict[str, Any]]
 
 def test_required_ports_published(services: dict[str, dict[str, Any]]) -> None:
     """Each service publishes its port on the host so the smoke-test curl chain works."""
+    # mcp-gateway is mapped 8100:8000 on the host — host port 8000 is commonly
+    # taken (DynamoDB Local, etc.), so the gateway publishes on 8100. The
+    # fraud-stack-up command and smoke-test curl chain both target :8100.
     expected: dict[str, int] = {
         "mock-oidc": 9000,
         "auth-gateway": 8080,
-        "mcp-gateway": 8000,
+        "mcp-gateway": 8100,
         "grafana": 3000,
     }
     for mock_name, mock_port, mcp_name, mcp_port in SERVER_TOPOLOGY:
